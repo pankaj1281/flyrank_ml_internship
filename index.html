@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search Intelligence for Content Decline Detection</title>
+<style>
+  body { margin:0; font-family:Arial, Helvetica, sans-serif; line-height:1.65; color:#202124; background:#f7f8fa; }
+  main { max-width:980px; margin:40px auto; background:white; padding:48px 56px; box-shadow:0 2px 14px rgba(0,0,0,.08); }
+  h1 { font-size:38px; line-height:1.15; margin-bottom:12px; }
+  h2 { margin-top:42px; padding-bottom:8px; border-bottom:1px solid #ddd; }
+  h3 { margin-top:28px; }
+  .subtitle { color:#5f6368; font-size:18px; }
+  .callout { padding:18px 20px; background:#f1f3f4; border-left:4px solid #5f6368; margin:22px 0; }
+  table { width:100%; border-collapse:collapse; margin:20px 0; }
+  th, td { border:1px solid #ddd; padding:11px; text-align:right; }
+  th:first-child, td:first-child { text-align:left; }
+  th { background:#f1f3f4; }
+  .metric { font-size:28px; font-weight:700; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:24px 0; }
+  .card { padding:18px; border:1px solid #ddd; border-radius:8px; }
+  .small { color:#5f6368; font-size:14px; }
+  code { background:#f1f3f4; padding:2px 5px; border-radius:4px; }
+  footer { margin-top:50px; padding-top:20px; border-top:1px solid #ddd; color:#5f6368; }
+  @media(max-width:700px){ main{margin:0;padding:28px 20px}.grid{grid-template-columns:1fr}h1{font-size:30px} }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="small">Search Intelligence · Research Paper</div>
+  <h1>Search Intelligence for Content Decline Detection</h1>
+  <p class="subtitle">A client-held-out modeling study for prioritizing content review</p>
+</header>
+
+<section>
+<h2>1. Title + Abstract</h2>
+<p><strong>Abstract.</strong> This study asks whether search and content signals can help identify potentially declining content for human review. A Random Forest classifier was trained using content, search-performance, freshness, and engagement signals and evaluated with a client-grouped holdout. On the held-out test set, the model measured an F1 score of 0.827 compared with 0.676 for a majority-class baseline. Signal auditing found a confirmed directional relationship between search position and CTR, while freshness and high-impression/low-CTR signals showed mixed evidence in the starter dataset. The resulting recommendations are intended as directional decision support for human content review rather than evidence of causal traffic or ranking impact.</p>
+</section>
+
+<section>
+<h2>2. Introduction / Problem Statement</h2>
+<p>Content teams need a repeatable way to prioritize pages that may deserve review. Reviewing every page manually is inefficient, while a simple rule can miss interactions among search visibility, CTR, content age, and other signals.</p>
+<p>The decision supported by this work is: <strong>which content should a reviewer investigate first?</strong> The system ranks potentially declining content and provides human-readable reason codes. It does not decide whether a page should ultimately be changed.</p>
+</section>
+
+<section>
+<h2>3. Data</h2>
+<p>The analysis uses the FlyRank starter dataset containing <strong>30,000 pseudonymized content items and 44 columns</strong>. The dataset contains trailing 90-day content and search-performance measures together with content characteristics and freshness signals.</p>
+<div class="grid">
+  <div class="card"><div class="metric">30,000</div><div>content items</div></div>
+  <div class="card"><div class="metric">44</div><div>source columns</div></div>
+  <div class="card"><div class="metric">90d</div><div>trailing metric window</div></div>
+</div>
+<p>The target <code>is_declining_label</code> is derived from <code>trend_direction</code>. Therefore <code>trend_direction</code> and <code>trend_pct</code> were excluded from model features. <code>content_id</code> and <code>client_id</code> were used only for identification/grouping and not as predictive features.</p>
+<p>The public-safe analysis does not expose client names, domains, private queries, credentials, or raw private exports.</p>
+</section>
+
+<section>
+<h2>4. Methodology</h2>
+<h3>Target and features</h3>
+<p>The classification target is <code>is_declining_label = (trend_direction == "down")</code>. The model uses 36 non-label features covering search demand, competition, content size, traffic/search performance, freshness, CTR, position, engagement, and categorical content characteristics.</p>
+<h3>Model</h3>
+<p>A Random Forest classifier was selected because it can capture nonlinear relationships among multiple signals without assuming a simple linear relationship. A majority-class classifier serves as the transparent baseline.</p>
+<h3>Validation design</h3>
+<p>Validation uses a client-grouped split. The training set contains <strong>25 clients and 23,837 rows</strong>; the test set contains <strong>7 clients and 6,163 rows</strong>. No client is shared between the training and test sets.</p>
+<h3>Leakage checks</h3>
+<p>Label-derived fields, identifiers, and other disallowed fields were checked before modeling. The audited leakage fields were not used as model features. The evaluation is therefore framed as a held-out-client measurement rather than a random row-level estimate.</p>
+</section>
+
+<section>
+<h2>5. Results</h2>
+<p>The Random Forest outperformed the majority-class baseline on the held-out client set across the reported metrics.</p>
+<table>
+<thead><tr><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th></tr></thead>
+<tbody>
+<tr><td>Baseline</td><td>0.511</td><td>0.511</td><td>1.000</td><td>0.676</td></tr>
+<tr><td><strong>Random Forest</strong></td><td><strong>0.814</strong></td><td><strong>0.788</strong></td><td><strong>0.870</strong></td><td><strong>0.827</strong></td></tr>
+</tbody>
+</table>
+<div class="callout"><strong>Measured result:</strong> F1 increased from 0.676 for the baseline to 0.827 for the Random Forest on the held-out clients. This is an observed improvement on this evaluation split, not a guarantee of future performance.</div>
+
+<h3>Signal audit</h3>
+<ul>
+<li><strong>Search position — CONFIRMED:</strong> higher search positions generally showed higher average CTR in the starter data.</li>
+<li><strong>Freshness — MIXED:</strong> freshness did not show a consistent relationship with CTR or impressions across all groups.</li>
+<li><strong>High impressions + low CTR — MIXED:</strong> the tested threshold produced 146 high-impression pages with zero observed CTR, so the signal mainly identified no-click pages rather than a graded opportunity.</li>
+<li><strong>Flag-linked staleness test — MIXED:</strong> the oldest group had high average CTR but only 174 rows, so staleness should not be used as a standalone refresh decision.</li>
+</ul>
+</section>
+
+<section>
+<h2>6. Limitations & Honest Framing</h2>
+<ul>
+<li>This analysis cannot establish that refreshing content causes traffic or ranking improvements.</li>
+<li>The measured model result comes from a particular held-out client split and may not generalize to every future client or time period.</li>
+<li>The starter dataset has uneven distributions and patterned missingness, so simple averages can hide subgroup differences.</li>
+<li>Prediction errors were observed across multiple CTR, position, and freshness values; 1,146 test-set predictions were incorrect.</li>
+<li>Recommendations are directional decision support and require human review before action.</li>
+</ul>
+</section>
+
+<section>
+<h2>7. Ranked Recommendations</h2>
+<p>The action playbook ranks pages by predicted decline probability and attaches human-readable reason codes such as <code>STALE_CONTENT</code>, <code>LOW_CTR</code>, <code>HIGH_IMPRESSIONS</code>, and <code>LOW_POSITION</code>.</p>
+<p><strong>Recommended workflow:</strong></p>
+<ol>
+<li>Review the highest-ranked pages first.</li>
+<li>Check the model score together with the reason codes.</li>
+<li>Verify current search position, CTR, impressions, freshness, content quality, and possible seasonality.</li>
+<li>Choose refresh, review, or monitoring only after human inspection.</li>
+</ol>
+<div class="callout"><strong>No-go:</strong> the model should not automatically publish, delete, rewrite, or claim that a content change will cause a traffic increase.</div>
+<p class="small">The notebook-generated ranked queue should be embedded here when the final public-safe artifact is prepared. Do not publish client-identifying or private fields.</p>
+</section>
+
+<section>
+<h2>8. Reproducibility</h2>
+<p>The accompanying repository contains the assignment notebooks covering the research question, task framing, data contract, leakage checks, signal audit, baseline, modeling, validation, and action playbook. The capstone notebook reproduces the principal results and exports the evidence artifacts used by this paper.</p>
+<p>The principal model result reported here uses a client-grouped holdout with 25 training clients, 7 test clients, and zero shared clients.</p>
+</section>
+
+<section>
+<h2>9. Acknowledgments & Data Credit</h2>
+<p>Built on the FlyRank ML Internship dataset.</p>
+<p><a href="https://flyrank.ai" target="_blank" rel="noopener">FlyRank</a></p>
+</section>
+
+<footer>
+<p><strong>Research framing:</strong> observed · measured · directional · decision-support</p>
+<p class="small">This paper reports an internship project using pseudonymized search/content data. It does not make causal claims about search-engine algorithms or the impact of content changes.</p>
+</footer>
+</main>
+</body>
+</html>
